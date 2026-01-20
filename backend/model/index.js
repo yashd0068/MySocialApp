@@ -78,11 +78,14 @@ db.User.belongsToMany(db.User, {
 db.Follow.belongsTo(db.User, { foreignKey: "follower_id", as: "FollowerUser" });
 db.Follow.belongsTo(db.User, { foreignKey: "following_id", as: "FollowingUser" });
 
+// Chat ↔ User through ChatUsers
+db.Chat.belongsToMany(db.User, { through: "ChatUsers", as: "Participants" });
+db.User.belongsToMany(db.Chat, { through: "ChatUsers", as: "Chats" });
+
+
+
 db.Chat.belongsToMany(db.User, { through: "ChatUsers" });
 db.User.belongsToMany(db.Chat, { through: "ChatUsers" });
-
-db.Chat.hasMany(db.Message, { foreignKey: "chat_id" });
-db.Message.belongsTo(db.Chat, { foreignKey: "chat_id" });
 
 db.Message.belongsTo(db.User, { foreignKey: "sender_id" });
 db.User.hasMany(db.Message, { foreignKey: "sender_id" });

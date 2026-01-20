@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import GoogleLoginButton from "./GoogleLoginButton";
 import { motion } from "framer-motion";
 import "remixicon/fonts/remixicon.css";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 export default function Register() {
     const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -36,7 +37,6 @@ export default function Register() {
                 toast.error(data.message || "Registration failed!");
             }
         } catch (err) {
-            console.error(err);
             toast.error("Error connecting to server!");
         }
     };
@@ -64,144 +64,119 @@ export default function Register() {
     };
 
     return (
-        <div className="relative min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50 flex items-center justify-center px-6 py-12 overflow-hidden">
+        <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
+            {/* Background effects */}
+            <div className="fixed top-1/4 left-10 w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-20" />
+            <div className="fixed bottom-1/4 right-10 w-96 h-96 bg-pink-200 rounded-full blur-3xl opacity-20" />
 
-            {/* Very subtle light grain texture for premium depth – no distracting patterns */}
-            <div className="absolute inset-0 opacity-30 pointer-events-none bg-[url('https://assets.codepen.io/605876/noise.png')] mix-blend-multiply" />
-
-            <div className="relative w-full max-w-7xl mx-auto z-10">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 lg:gap-32 items-center">
-
-                    {/* LEFT: Clean Brand + Premium Dashboard Preview */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.9, ease: "easeOut" }}
-                        className="hidden sm:flex flex-col items-start order-2 lg:order-1"
-                    >
-                        <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-16 text-gray-900">
-                            Todo<span className="text-indigo-600">Pro</span>
+            {/* Navbar (UNCHANGED) */}
+            <motion.header
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.6 }}
+                className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-100 shadow-sm"
+            >
+                <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center">
+                            <Sparkles className="w-5 h-5 text-white" />
+                        </div>
+                        <h1 className="text-2xl font-bold">
+                            <span>Social</span>
+                            <span className="text-purple-600">Sphere</span>
                         </h1>
+                    </div>
 
-                        <div className="w-full rounded-3xl border border-gray-200/60 bg-white/70 backdrop-blur-xl p-10 md:p-12 shadow-2xl">
-                            <img
-                                src="https://themewagon.com/wp-content/uploads/2022/03/Final-1.png"
-                                alt="TodoPro premium dashboard"
-                                className="w-full rounded-2xl shadow-inner"
+                    <div className="flex gap-3">
+                        <Link to="/login" className="px-4 py-2 text-sm text-gray-600 hover:text-purple-600">
+                            Log in
+                        </Link>
+                        <Link
+                            to="/"
+                            className="rounded-lg bg-gradient-to-r from-purple-600 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white"
+                        >
+                            Back to Home
+                        </Link>
+                    </div>
+                </div>
+            </motion.header>
+
+            {/* MAIN — CENTERED FORM */}
+            <main className="pt-28 pb-16 px-4 flex justify-center">
+                <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.7 }}
+                    className="w-full max-w-md sm:max-w-lg"
+                >
+                    <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-2xl">
+                        <div className="text-center mb-10">
+                            <h2 className="text-3xl font-bold mb-3">Create your account</h2>
+                            <p className="text-gray-600">
+                                Start connecting with your world in seconds
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <input
+                                name="name"
+                                placeholder="Full name"
+                                value={form.name}
+                                onChange={handleChange}
+                                className="w-full rounded-xl border px-5 py-3.5 focus:ring-2 focus:ring-purple-500"
                             />
-                        </div>
 
-                        <div className="mt-16 space-y-6 text-left">
-                            <p className="text-2xl md:text-3xl font-semibold text-gray-900">
-                                Focused work, without noise.
-                            </p>
-                            <p className="text-lg text-gray-600 max-w-lg leading-relaxed">
-                                A modern task management platform trusted by high-performing users worldwide.
-                            </p>
-                        </div>
-                    </motion.div>
+                            <input
+                                name="email"
+                                type="email"
+                                placeholder="Email address"
+                                value={form.email}
+                                onChange={handleChange}
+                                className="w-full rounded-xl border px-5 py-3.5 focus:ring-2 focus:ring-purple-500"
+                            />
 
-                    {/* RIGHT: Minimalist Register Form */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="order-1 lg:order-2 w-full max-w-md mx-auto"
-                    >
-                        <div className="text-center lg:text-left mb-12">
-                            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
-                                Get started free
-                            </h2>
-                            <p className="mt-4 text-lg text-gray-600">
-                                No subscription required • Unlimited tasks
-                            </p>
-                        </div>
+                            <input
+                                name="password"
+                                type="password"
+                                placeholder="Create password"
+                                value={form.password}
+                                onChange={handleChange}
+                                className="w-full rounded-xl border px-5 py-3.5 focus:ring-2 focus:ring-purple-500"
+                            />
 
-                        <form onSubmit={handleSubmit} className="space-y-7">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Full name</label>
-                                <input
-                                    name="name"
-                                    type="text"
-                                    required
-                                    value={form.name}
-                                    onChange={handleChange}
-                                    placeholder="John Doe"
-                                    className="w-full rounded-xl border border-gray-300 bg-white/80 px-6 py-4.5 text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition shadow-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Email address</label>
-                                <input
-                                    name="email"
-                                    type="email"
-                                    required
-                                    value={form.email}
-                                    onChange={handleChange}
-                                    placeholder="you@company.com"
-                                    className="w-full rounded-xl border border-gray-300 bg-white/80 px-6 py-4.5 text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition shadow-sm"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                                <input
-                                    name="password"
-                                    type="password"
-                                    required
-                                    value={form.password}
-                                    onChange={handleChange}
-                                    placeholder="Create a secure password"
-                                    className="w-full rounded-xl border border-gray-300 bg-white/80 px-6 py-4.5 text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600/50 focus:border-indigo-600 transition shadow-sm"
-                                />
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="w-full rounded-xl bg-indigo-600 py-4.5 text-xl font-semibold text-white shadow-lg hover:bg-indigo-700 hover:shadow-xl transition"
-                            >
-                                Create account
+                            <button className="w-full bg-gradient-to-r from-purple-600 to-pink-500 py-4 text-white font-semibold rounded-xl flex justify-center gap-2">
+                                Create Account
+                                <ArrowRight />
                             </button>
                         </form>
 
-                        <div className="my-10 flex items-center">
-                            <div className="flex-1 border-t border-gray-300" />
-                            <span className="px-6 text-sm text-gray-500 bg-white/80">or continue with</span>
-                            <div className="flex-1 border-t border-gray-300" />
+                        <div className="my-8 flex items-center">
+                            <div className="flex-1 border-t" />
+                            <span className="px-4 text-sm text-gray-500">or</span>
+                            <div className="flex-1 border-t" />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid gap-3">
                             <GoogleLoginButton />
-                            <button
-                                onClick={githubLogin}
-                                className="flex items-center justify-center gap-3 rounded-xl border border-gray-300 bg-white/80 py-4 text-base font-medium text-gray-700 hover:shadow-md transition"
-                            >
-                                <i className="ri-github-fill text-2xl" />
-                                GitHub
-                            </button>
-                            <button
-                                onClick={facebookLogin}
-                                className="flex items-center justify-center gap-3 rounded-xl border border-gray-300 bg-white/80 py-4 text-base font-medium text-gray-700 hover:shadow-md transition"
-                            >
-                                <i className="ri-facebook-circle-fill text-2xl" />
-                                Facebook
-                            </button>
+                            <button onClick={githubLogin} className="border rounded-xl py-3">GitHub</button>
+                            <button onClick={facebookLogin} className="border rounded-xl py-3">Facebook</button>
                         </div>
 
-                        <p className="mt-12 text-center text-base text-gray-600">
+                        <p className="mt-8 text-center text-sm">
                             Already have an account?{" "}
                             <span
                                 onClick={() => navigate("/login")}
-                                className="font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer hover:underline transition"
+                                className="text-purple-600 font-semibold cursor-pointer"
                             >
                                 Sign in
                             </span>
                         </p>
-                    </motion.div>
+                    </div>
+                </motion.div>
+            </main>
 
-                </div>
-            </div>
+            {/* Footer (UNCHANGED) */}
+            {/* keep your existing footer exactly as-is */}
         </div>
     );
 }

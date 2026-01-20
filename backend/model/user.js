@@ -31,6 +31,8 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: true
             },
 
+
+
             profilePic: {
                 type: DataTypes.STRING,
                 allowNull: true,
@@ -74,9 +76,10 @@ module.exports = (sequelize, DataTypes) => {
                     }
                 },
                 beforeUpdate: async (user) => {
-                    if (user.changed('password') && user.password) {
+                    if (user.changed("password") && user.password) {
                         const salt = await bcrypt.genSalt(12);
                         user.password = await bcrypt.hash(user.password, salt);
+                        user.passwordSet = true;
                     }
                 }
             }

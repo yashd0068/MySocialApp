@@ -10,7 +10,7 @@ import Landing from "./pages/Landing";
 // import Profile from "./pages/Profile";
 // import EditProfile from "./pages/EditProfile";
 import { Toaster } from "react-hot-toast";
-// import Password from "./pages/Password";
+import Password from "./pages/Password";
 // import ChangePassword from "./pages/ChangePassword";
 import GithubCallback from "./pages/GithubCallback";
 // import FacebookCallback from "./pages/FacebookCallback";
@@ -18,6 +18,9 @@ import GithubCallback from "./pages/GithubCallback";
 import Profile from "./pages/Profile";
 import MainLayout from "./pages/MainLayout";
 import Search from "./pages/Search";
+import ChangePassword from "./pages/ChangePassword";
+import ChatHistory from "./pages/chatHistory";
+import ForgotPassword from "./pages/ForgotPassword";
 
 
 function App() {
@@ -53,22 +56,27 @@ function App() {
           <Route path="/github-callback" element={<GithubCallback />} />
           {/* <Route path="/facebook-callback" element={<FacebookCallback />} /> */}
           {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
         </Route>
 
         {/* Private routes */}
         <Route element={<PrivateRoute />}>
-          <Route element={<MainLayout />}></Route>
-          {/* <Route path="/profile" element={<Profile />} />
-          <Route path="/edit-profile" element={<EditProfile />} /> */}
           <Route path="/home" element={<Home />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/profile/:user_id" element={<Profile />} />
-          {/* <Route path="/add" element={<AddTodo />} />
+          <Route element={<MainLayout />}>
+            {/* <Route path="/profile" element={<Profile />} />
+          <Route path="/edit-profile" element={<EditProfile />} /> */}
+
+            <Route path="/search" element={<Search />} />
+            <Route path="/profile/:user_id" element={<Profile />} />
+            {/* <Route path="/add" element={<AddTodo />} />
           <Route path="/edit/:id" element={<Edittodo />} />
           <Route path="/password" element={<Password />} />
           <Route path="/change-password" element={< ChangePassword />} /> */}
-
+            <Route path="/change-password" element={<ChangePassword />} />
+            <Route path="/chats" element={<ChatHistory />} />
+            <Route path="/password" element={<Password />} />
+          </Route>
 
 
         </Route>

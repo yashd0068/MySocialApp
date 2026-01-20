@@ -1,4 +1,5 @@
 const { User, Post, Follow, Like, Comment } = require("../model");
+const { Op } = require("sequelize");
 
 exports.getUserProfile = async (req, res) => {
     try {
@@ -10,6 +11,14 @@ exports.getUserProfile = async (req, res) => {
             attributes: ["user_id", "name", "email", "profilePic"],
         });
         if (!user) return res.status(404).json({ message: "User not found" });
+
+        // ← ADD THIS: Check if current user is following this profile
+        const isFollowing = await Follow.findOne({
+            where: {
+                follower_id: current_user_id,
+                following_id: profile_user_id,
+            },
+        }) !== null;
 
         // STATS
         const [postsCount, followersCount, followingCount] = await Promise.all([
@@ -46,8 +55,13 @@ exports.getUserProfile = async (req, res) => {
 
         res.json({
             user,
-            stats: { posts: postsCount, followers: followersCount, following: followingCount },
+            stats: {
+                posts: postsCount,
+                followers: followersCount,
+                following: followingCount
+            },
             posts: formattedPosts,
+            isFollowing: isFollowing   // ← ADD THIS LINE (this is the key!)
         });
 
     } catch (err) {
@@ -56,3 +70,46 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+exports.updateProfile = async (req, res) => {
+    try {
+        const userId = req.user.user_id;
+        const { name, email } = req.body;
+
+        if (!name && !email) {
+            return res.status(400).json({ message: "Nothing to update" });
+        }
+
+        // 🔒 Check if email already exists (except this user)
+        if (email) {
+            const existingUser = await User.findOne({
+                where: {
+                    email,
+                    user_id: { [Op.ne]: userId }
+                }
+            });
+
+            if (existingUser) {
+                return res.status(400).json({ message: "Email already in use" });
+            }
+        }
+
+        // Update
+        await User.update(
+            { name, email },
+            { where: { user_id: userId } }
+        );
+
+        const updatedUser = await User.findByPk(userId, {
+            attributes: ["user_id", "name", "email", "profilePic"]
+        });
+
+        res.json({
+            message: "Profile updated successfully",
+            user: updatedUser
+        });
+
+    } catch (err) {
+        console.error("Update profile error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};

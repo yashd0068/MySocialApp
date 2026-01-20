@@ -6,12 +6,18 @@ console.log("UPLOAD =", upload)
 
 
 
-const { register, login, getMe, getUserProfile, uploadProfilePic } = require("../controller/userController");
+const { register, login, getMe, getUserProfile, uploadProfilePic, changePassword, setPassword, forgotPassword, verifyOTP, resetPassword } =
+    require("../controller/userController");
 const { verifyToken } = require("../middleware/authMiddleware");
+
 
 // Auth routes
 router.post("/register", register);
 router.post("/login", login);
+
+router.post("/forgot-password", forgotPassword);
+router.post("/verify-otp", verifyOTP);
+router.post("/reset-password", resetPassword);
 
 // Current user
 router.get("/me", verifyToken, getMe);
@@ -41,6 +47,11 @@ router.put(
 // Get any user profile
 router.get("/:user_id", verifyToken, getUserProfile);
 
+router.post("/set-password", verifyToken, setPassword);
+router.post("/change-password", verifyToken, changePassword);
+
 console.log("uploadProfilePic =", uploadProfilePic);
+
+
 
 module.exports = router;

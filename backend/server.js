@@ -39,27 +39,27 @@ const io = new Server(server, {
     },
 });
 
-/* 🔥 Make io available everywhere (controllers, routes, etc.) */
-global.io = io;           // easiest
-app.set("io", io);        // optional, for req.app.get("io")
 
+global.io = io;
+app.set("io", io);
+
+// In your server-side socket setup
 io.on("connection", (socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
-    /* ✅ USER PERSONAL ROOM (for notifications) */
-    socket.on("joinUserRoom", (userId) => {
-        socket.join(`user_${userId}`);
-        console.log(`User ${userId} joined personal room`);
-    });
-
-    /* ✅ CHAT ROOMS */
+    // ✅ CHAT ROOMS - Fixed parameter handling
     socket.on("joinChat", (chatId) => {
+        if (!chatId) return;
         const room = chatId.toString();
         socket.join(room);
         console.log(`Socket ${socket.id} joined chat room: ${room}`);
+
+        // Send acknowledgement
+        socket.emit("chatJoined", { room, success: true });
     });
 
     socket.on("leaveChat", (chatId) => {
+        if (!chatId) return;
         const room = chatId.toString();
         socket.leave(room);
         console.log(`Socket ${socket.id} left chat room: ${room}`);
@@ -69,10 +69,9 @@ io.on("connection", (socket) => {
         console.log(`Socket disconnected: ${socket.id}`);
     });
 });
-
 // ---------------- DATABASE + SERVER ----------------
 sequelize
-    .sync({ alter: true })
+    .sync()
     .then(() => {
         console.log("Database synced successfully");
         server.listen(PORT, () => {

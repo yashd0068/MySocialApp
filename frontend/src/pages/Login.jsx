@@ -1,37 +1,55 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import GoogleLoginButton from "./GoogleLoginButton";
 import { motion } from "framer-motion";
-import "remixicon/fonts/remixicon.css";
+import {
+    Sparkles,
+    Lock,
+    Mail,
+    Eye,
+    EyeOff,
+    ArrowRight
+} from "lucide-react";
+import GoogleLoginButton from "./GoogleLoginButton";
 
 export default function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [formData, setFormData] = useState({
+        email: "",
+        password: ""
+    });
+    const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
 
         try {
             const response = await fetch("http://localhost:5000/api/users/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify(formData),
             });
 
             const data = await response.json();
 
             if (response.ok) {
                 localStorage.setItem("token", data.token);
-                toast.success("Welcome back");
+                toast.success("Welcome back! 🚀");
                 setTimeout(() => navigate("/home"), 800);
             } else {
-                toast.error(data.message || "Invalid credentials");
+                toast.error(data.message || "Invalid email or password");
             }
         } catch (error) {
             console.error(error);
             toast.error("Network error. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -47,127 +65,93 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-[#fafafa] flex items-center justify-center px-6">
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex items-center justify-center px-4">
+
             <motion.div
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.45, ease: "easeOut" }}
-                className="
-          w-full max-w-md rounded-2xl
-          border border-gray-200/70
-          bg-white
-          px-8 py-10
-          shadow-[0_8px_30px_rgba(0,0,0,0.04)]
-        "
+                transition={{ duration: 0.6 }}
+                className="w-full max-w-md"
             >
-                {/* Brand */}
-                <div className="mb-10 text-center">
-                    <h1 className="text-[22px] font-semibold tracking-tight text-gray-900">
-                        My<span className="text-indigo-600">App</span>
+                {/* Header */}
+                <div className="text-center mb-10">
+                    <Sparkles className="w-8 h-8 text-purple-600 mx-auto mb-4" />
+                    <h1 className="text-3xl font-bold">
+                        Welcome back to <span className="text-purple-600">SocialSphere</span>
                     </h1>
-                    <p className="mt-2 text-sm text-gray-500">
-                        Sign in to continue
-                    </p>
+                    <p className="text-gray-600 mt-2">Sign in to your account</p>
                 </div>
 
-                {/* Social Auth */}
-                <div className="flex flex-col gap-3 mb-7">
-                    <GoogleLoginButton />
+                <div className="glass-card rounded-2xl p-8 shadow-xl">
+                    {/* Social Login */}
+                    <div className="space-y-4 mb-8">
+                        <GoogleLoginButton />
 
-                    <button
-                        onClick={githubLogin}
-                        className="
-              flex items-center justify-center gap-2
-              rounded-xl border border-gray-300/80
-              py-3 text-sm font-medium text-gray-700
-              bg-white
-              hover:bg-gray-50
-              transition-colors
-            "
-                    >
-                        <i className="ri-github-fill text-base text-gray-800" />
-                        Continue with GitHub
-                    </button>
-                </div>
-
-                {/* Divider */}
-                <div className="my-7 flex items-center gap-4">
-                    <div className="h-px flex-1 bg-gray-200/80" />
-                    <span className="text-[11px] uppercase tracking-wide text-gray-400">
-                        Email login
-                    </span>
-                    <div className="h-px flex-1 bg-gray-200/80" />
-                </div>
-
-                {/* Email Login */}
-                <form onSubmit={handleLogin} className="space-y-5">
-                    <input
-                        type="email"
-                        placeholder="Email address"
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="
-              w-full rounded-lg
-              border border-gray-300/80
-              px-4 py-3 text-sm text-gray-900
-              placeholder:text-gray-400
-              focus:outline-none
-              focus:border-indigo-500
-              focus:ring-2 focus:ring-indigo-500/10
-            "
-                    />
-
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        className="
-              w-full rounded-lg
-              border border-gray-300/80
-              px-4 py-3 text-sm text-gray-900
-              placeholder:text-gray-400
-              focus:outline-none
-              focus:border-indigo-500
-              focus:ring-2 focus:ring-indigo-500/10
-            "
-                    />
-
-                    <button
-                        type="submit"
-                        className="
-              w-full rounded-xl
-              bg-indigo-600
-              py-3 text-sm font-semibold
-              text-white
-              transition-colors
-              hover:bg-indigo-700
-            "
-                    >
-                        Sign in
-                    </button>
-
-                    <div className="text-right">
                         <button
-                            type="button"
-                            onClick={() => navigate("/forgot-password")}
-                            className="text-sm font-medium text-gray-600 hover:text-indigo-600"
+                            onClick={githubLogin}
+                            className="w-full flex items-center justify-center gap-3 rounded-xl border border-gray-300 bg-white py-3.5 text-sm font-medium hover:bg-purple-50"
                         >
-                            Forgot password?
+                            Continue with GitHub
                         </button>
                     </div>
-                </form>
 
-                {/* Footer */}
-                <p className="mt-9 text-center text-sm text-gray-600">
-                    New here?{" "}
-                    <span
-                        onClick={() => navigate("/register")}
-                        className="cursor-pointer font-medium text-indigo-600 hover:underline"
-                    >
-                        Create an account
-                    </span>
-                </p>
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 border-t"></div>
+                        <span className="relative bg-white px-4 text-gray-500 text-sm">Or login with email</span>
+                    </div>
+
+                    {/* Login Form */}
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Email</label>
+                            <input
+                                type="email"
+                                name="email"
+                                required
+                                onChange={handleChange}
+                                className="w-full rounded-xl border px-4 py-3 mt-1"
+                                placeholder="you@example.com"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    required
+                                    onChange={handleChange}
+                                    className="w-full rounded-xl border px-4 py-3 mt-1 pr-12"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                                >
+                                    {showPassword ? <EyeOff /> : <Eye />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            disabled={isLoading}
+                            className="w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 py-4 text-white font-semibold"
+                        >
+                            {isLoading ? "Signing in..." : "Login"}
+                        </motion.button>
+                    </form>
+
+                    <p className="mt-6 text-center text-gray-600">
+                        Don’t have an account?{" "}
+                        <Link to="/register" className="text-purple-600 font-semibold">
+                            Register
+                        </Link>
+                    </p>
+                </div>
             </motion.div>
         </div>
     );

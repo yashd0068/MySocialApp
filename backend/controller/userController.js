@@ -1,6 +1,10 @@
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { User, Post, Follow, Like } = require("../model");
 const { Op } = require("sequelize");
+const transporter = require("../config/mailer");
+
+
 
 /* ================= REGISTER ================= */
 exports.register = async (req, res) => {
@@ -83,15 +87,123 @@ exports.login = async (req, res) => {
 };
 
 /* ================= GET ME ================= */
+// exports.getMe = async (req, res) => {
+//     try {
+//         const user = await User.findByPk(req.user.user_id, {
+//             attributes: ["user_id", "name", "email", "profilePic"],
+//         });
+
+//         res.json(user);
+//     } catch (err) {
+//         res.status(500).json({ message: "Failed to fetch user" });
+//     }
+// };
+
+// exports.getMe = async (req, res) => {
+//     try {
+//         const user = await User.findByPk(req.user.user_id, {
+//             attributes: ["user_id", "name", "email", "profilePic", "passwordSet"],
+//         });
+
+//         res.json({
+//             ...user.toJSON(),
+//             hasPassword: !!user.passwordSet, // frontend can use this
+//         });
+//     } catch (err) {
+//         res.status(500).json({ message: "Failed to fetch user" });
+//     }
+// };
+
+/* ================= GET ME ================= */
 exports.getMe = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.user_id, {
-            attributes: ["user_id", "name", "email", "profilePic"],
+            attributes: ["user_id", "name", "email", "profilePic", "passwordSet", "authType"],
         });
 
-        res.json(user);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        res.json({
+            user_id: user.user_id,
+            name: user.name,
+            email: user.email,
+            profilePic: user.profilePic,
+            hasPassword: !!user.passwordSet, // Critical for frontend
+            authProvider: user.authType || "local", // Use authType from your model
+        });
     } catch (err) {
+        console.error("GetMe error:", err);
         res.status(500).json({ message: "Failed to fetch user" });
+    }
+};
+
+exports.setPassword = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.user_id);
+
+        if (user.passwordSet) {
+            return res.status(400).json({
+                message: "Password already set. Use change-password endpoint."
+            });
+        }
+
+        const { newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters"
+            });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ message: "Password set successfully" });
+
+    } catch (err) {
+        console.error("Set password error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+exports.changePassword = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.user_id);
+
+        if (!user.passwordSet) {
+            return res.status(400).json({
+                message: "No password set. Please use set-password endpoint."
+            });
+        }
+
+        const { currentPassword, newPassword } = req.body;
+
+        // Validate required fields
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                message: "Current password and new password are required"
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({
+                message: "New password must be at least 6 characters"
+            });
+        }
+
+        const isMatch = await user.validPassword(currentPassword);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Current password is incorrect" });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({ message: "Password changed successfully" });
+
+    } catch (err) {
+        console.error("Change password error:", err);
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -203,3 +315,97 @@ exports.uploadProfilePic = async (req, res) => {
 };
 
 
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
+        }
+
+        const user = await User.findOne({ where: { email } });
+
+        if (!user) {
+            return res.status(404).json({
+                message: "No account found with this email. Please check or sign up."
+            });
+        }
+
+        if (!user.passwordSet) {
+            return res.status(400).json({
+                message: "This account uses social login. Please login with your OAuth provider.",
+            });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        await user.update({
+            resetOTP: otp,
+            resetOTPExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        });
+
+        await transporter.sendMail({
+            from: `"Todo App" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "Password Reset OTP",
+            html: `<h2>Your OTP for password reset:</h2><h1 style="color:blue;">${otp}</h1><p>This OTP is valid for 10 minutes only.</p>`,
+        });
+
+        return res.status(200).json({
+            message: "OTP sent successfully to your email"
+        });
+
+    } catch (err) {
+        console.error("Forgot password error:", err);
+        return res.status(500).json({ message: "Server error. Please try again later." });
+    }
+};
+exports.verifyOTP = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+
+        const user = await User.findOne({
+            where: {
+                email,
+                resetOTP: otp,
+                resetOTPExpiry: { [Op.gt]: new Date() },
+            },
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired OTP" });
+        }
+
+        res.json({ message: "OTP verified successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, newPassword } = req.body;
+
+        const user = await User.findOne({ where: { email } });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Use the instance method to update password
+        // This will trigger the beforeUpdate hook
+        user.password = newPassword;
+        await user.save();
+
+        res.json({
+            message: "Password reset successfully",
+            success: true
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Server error during password reset",
+            error: err.message
+        });
+    }
+};
