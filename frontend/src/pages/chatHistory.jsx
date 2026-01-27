@@ -38,9 +38,11 @@ const ChatHistory = () => {
         <div className="max-w-6xl mx-auto p-4">
             <h1 className="text-2xl font-bold mb-6">Messages</h1>
 
-            <div className="flex gap-6 h-[600px]">
+            <div className="flex gap-6 h-[600px] relative">
+
                 {/* Chat list sidebar */}
-                <div className="w-1/3 bg-white border rounded-lg overflow-hidden">
+                <div className={`bg-white border rounded-lg overflow-hidden 
+    ${activeChat ? "hidden md:block md:w-1/3" : "w-full md:w-1/3"}`}>
                     <div className="p-4 border-b">
                         <h2 className="font-semibold">Conversations</h2>
                     </div>
@@ -81,22 +83,18 @@ const ChatHistory = () => {
                 </div>
 
                 {/* Chat window area */}
-                <div className="flex-1">
-                    {activeChat ? (
+                {/* Chat window area */}
+                {activeChat && (
+                    <div className="fixed inset-0 md:static md:flex-1 bg-white z-50">
+
                         <ChatWindow
                             chatId={activeChat}
                             currentUser={currentUser}
                             onClose={closeChat}
                         />
-                    ) : (
-                        <div className="h-full flex items-center justify-center bg-gray-50 border rounded-lg">
-                            <div className="text-center text-gray-500">
-                                <div className="text-4xl mb-4">💬</div>
-                                <p>Select a conversation to start chatting</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
+
             </div>
         </div>
     );

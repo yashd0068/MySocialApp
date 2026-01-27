@@ -393,7 +393,7 @@ exports.resetPassword = async (req, res) => {
         }
 
         // Use the instance method to update password
-        // This will trigger the beforeUpdate hook
+        // This will trigger the beforeUpdate hooks
         user.password = newPassword;
         await user.save();
 

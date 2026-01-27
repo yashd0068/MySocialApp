@@ -21,6 +21,8 @@ import Search from "./pages/Search";
 import ChangePassword from "./pages/ChangePassword";
 import ChatHistory from "./pages/chatHistory";
 import ForgotPassword from "./pages/ForgotPassword";
+import Chats from "./pages/Chats";
+import ChatPage from "./pages/ChatPage";
 
 
 function App() {
@@ -76,6 +78,8 @@ function App() {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/chats" element={<ChatHistory />} />
             <Route path="/password" element={<Password />} />
+            <Route path="/chats" element={<Chats />} />
+            <Route path="/chat/:chatId" element={<ChatPage />} />
           </Route>
 
 

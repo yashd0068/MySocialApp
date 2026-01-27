@@ -17,6 +17,11 @@ db.Message = require("./Message")(sequelize, DataTypes);
 
 db.Notification = require("./Notification")(sequelize, DataTypes);
 
+
+db.DeletedMessage = require("./DeletedMessage")(sequelize, DataTypes);
+db.DeletedChat = require("./DeletedChat")(sequelize, DataTypes);
+
+
 /* ================= POSTS ================= */
 
 db.User.hasMany(db.Post, { foreignKey: "user_id" });
@@ -82,10 +87,14 @@ db.Follow.belongsTo(db.User, { foreignKey: "following_id", as: "FollowingUser" }
 db.Chat.belongsToMany(db.User, { through: "ChatUsers", as: "Participants" });
 db.User.belongsToMany(db.Chat, { through: "ChatUsers", as: "Chats" });
 
+db.Chat.hasMany(db.Message, { foreignKey: "chat_id", as: "Messages" });
+
+db.Message.belongsTo(db.Chat, { foreignKey: "chat_id", as: "Chat" });
 
 
-db.Chat.belongsToMany(db.User, { through: "ChatUsers" });
-db.User.belongsToMany(db.Chat, { through: "ChatUsers" });
+
+// db.Chat.belongsToMany(db.User, { through: "ChatUsers" });
+// db.User.belongsToMany(db.Chat, { through: "ChatUsers" });
 
 db.Message.belongsTo(db.User, { foreignKey: "sender_id" });
 db.User.hasMany(db.Message, { foreignKey: "sender_id" });

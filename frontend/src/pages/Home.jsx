@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import Navbar from "../components/Navbar";
 import api from "../api/axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Feed from "./Feed";
 import InfiniteScroll from "react-infinite-scroll-component";
 import MobileBottomNav from "../components/MobileBottomNav";
+import { MessageCircle } from "lucide-react";
 
 const Home = () => {
     const feedRef = useRef(null);
+    const navigate = useNavigate();
 
     const [user, setUser] = useState(null);
     const [content, setContent] = useState("");
@@ -110,6 +112,24 @@ const Home = () => {
         setFollowing(following.filter(f => f !== id));
     };
 
+    // Start chat with a user
+    const startChat = async (userId) => {
+        try {
+            const res = await api.post("/chat", { user_id: userId });
+
+            // ⚠️ IMPORTANT: match backend response
+            const chatId = res.data.chat?.chat_id || res.data.chat_id;
+
+            // Redirect to that user's profile with chat param
+            navigate(`/profile/${userId}?chat=${chatId}`);
+
+        } catch (err) {
+            console.error("Failed to start chat:", err.response?.data || err.message);
+            alert("Failed to start chat. Please try again.");
+        }
+    };
+
+
     if (!user) return <p className="p-8 text-gray-400">Loading...</p>;
 
     return (
@@ -119,7 +139,7 @@ const Home = () => {
             <div className="min-h-screen bg-gray-50">
                 <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-12 gap-8">
 
-                    {/* LEFT */}
+                    {/* LEFT - DESKTOP SIDEBAR */}
                     <aside className="col-span-3 hidden lg:block">
                         <div className="sticky top-24 space-y-6">
                             <div>
@@ -132,23 +152,29 @@ const Home = () => {
                             </div>
 
                             <nav className="space-y-3 text-sm">
-                                <Link className="block font-medium text-indigo-600">
+                                <Link to="/home" className="block font-medium text-indigo-600">
                                     Home
                                 </Link>
                                 <Link
                                     to={`/profile/${user.user_id}`}
-                                    className="block text-gray-600 hover:text-gray-900"
+                                    className="block text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded transition"
                                 >
                                     Profile
+                                </Link>
+                                <Link
+                                    to="/chats"
+                                    className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 p-2 rounded transition"
+                                >
+                                    <MessageCircle className="w-4 h-4" />
+                                    Messages
                                 </Link>
                             </nav>
                         </div>
                     </aside>
 
-                    {/* CENTER */}
+                    {/* CENTER - MAIN FEED */}
                     <main className="col-span-12 lg:col-span-6 space-y-6">
 
-                        {/* Composer */}
                         {/* Composer (Desktop) */}
                         <div className="hidden lg:block bg-white rounded-xl border shadow-sm p-4">
                             <textarea
@@ -167,12 +193,14 @@ const Home = () => {
                             <div className="flex justify-end mt-3">
                                 <button
                                     onClick={handlePost}
-                                    className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white"
+                                    className="px-4 py-2 text-sm font-medium rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition"
                                 >
                                     Publish
                                 </button>
                             </div>
                         </div>
+
+                        {/* Composer (Mobile Modal) */}
                         {showComposer && (
                             <div className="fixed inset-0 z-50 bg-black/40 flex items-end lg:hidden">
                                 <div className="bg-white w-full rounded-t-2xl p-4">
@@ -192,7 +220,7 @@ const Home = () => {
                                     <div className="flex justify-between mt-4">
                                         <button
                                             onClick={() => setShowComposer(false)}
-                                            className="text-gray-500"
+                                            className="text-gray-500 hover:text-gray-700 px-4 py-2 rounded"
                                         >
                                             Cancel
                                         </button>
@@ -201,7 +229,7 @@ const Home = () => {
                                                 handlePost();
                                                 setShowComposer(false);
                                             }}
-                                            className="bg-indigo-600 text-white px-4 py-2 rounded-md"
+                                            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
                                         >
                                             Post
                                         </button>
@@ -210,15 +238,13 @@ const Home = () => {
                             </div>
                         )}
 
-
-
                         {/* FEED */}
                         <InfiniteScroll
                             dataLength={posts.length}
                             next={fetchPosts}
                             hasMore={hasMore}
-                            loader={<p className="text-center text-gray-500">Loading...</p>}
-                            endMessage={<p className="text-center text-gray-500">No more posts</p>}
+                            loader={<p className="text-center text-gray-500 py-4">Loading...</p>}
+                            endMessage={<p className="text-center text-gray-500 py-4">No more posts</p>}
                         >
                             {posts.map(post => (
                                 <Feed
@@ -237,7 +263,7 @@ const Home = () => {
 
                     </main>
 
-                    {/* RIGHT */}
+                    {/* RIGHT - DISCOVER PEOPLE */}
                     <aside className="col-span-3 hidden lg:block">
                         <div className="sticky top-24 bg-white rounded-xl border shadow-sm p-4">
                             <h3 className="font-semibold text-gray-900 mb-3">
@@ -256,44 +282,98 @@ const Home = () => {
                                     results.map(u => (
                                         <div
                                             key={u.user_id}
-                                            className="flex justify-between items-center text-sm"
+                                            className="flex justify-between items-center text-sm p-2 hover:bg-gray-50 rounded transition"
                                         >
-                                            <Link
-                                                to={`/profile/${u.user_id}`}
-                                                className="font-medium text-gray-800 hover:underline"
-                                            >
-                                                {u.name}
-                                            </Link>
+                                            <div className="flex items-center gap-3">
+                                                <Link
+                                                    to={`/profile/${u.user_id}`}
+                                                    className="flex items-center gap-3"
+                                                >
+                                                    {u.profilePic ? (
+                                                        <img
+                                                            src={`http://localhost:5000${u.profilePic}`}
+                                                            alt={u.name}
+                                                            className="w-8 h-8 rounded-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                                                            {u.name?.charAt(0) || 'U'}
+                                                        </div>
+                                                    )}
+                                                    <span className="font-medium text-gray-800 hover:underline">
+                                                        {u.name}
+                                                    </span>
+                                                </Link>
+                                            </div>
 
-                                            {following.includes(u.user_id) ? (
+                                            <div className="flex gap-2">
+                                                {following.includes(u.user_id) ? (
+                                                    <button
+                                                        onClick={() => unfollow(u.user_id)}
+                                                        className="text-red-500 text-xs hover:text-red-700 px-2 py-1 border border-red-200 rounded hover:bg-red-50 transition"
+                                                    >
+                                                        Unfollow
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => follow(u.user_id)}
+                                                        className="text-indigo-600 text-xs hover:text-indigo-700 px-2 py-1 border border-indigo-200 rounded hover:bg-indigo-50 transition"
+                                                    >
+                                                        Follow
+                                                    </button>
+                                                )}
                                                 <button
-                                                    onClick={() => unfollow(u.user_id)}
-                                                    className="text-red-500 text-xs"
+                                                    onClick={() => startChat(u.user_id)}
+                                                    className="text-gray-600 text-xs hover:text-gray-800 px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 transition"
+                                                    title="Message"
                                                 >
-                                                    Unfollow
+                                                    <MessageCircle className="w-3 h-3" />
                                                 </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => follow(u.user_id)}
-                                                    className="text-indigo-600 text-xs"
-                                                >
-                                                    Follow
-                                                </button>
-                                            )}
+                                            </div>
                                         </div>
                                     ))
                                 ) : search.trim() ? (
                                     <p className="text-gray-500 text-sm">No users found.</p>
                                 ) : null}
                             </div>
+
+                            {/* Chat section */}
+                            <div className="mt-6 pt-4 border-t">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-medium text-gray-900">Messages</h4>
+                                    <Link
+                                        to="/chats"
+                                        className="text-xs text-indigo-600 hover:text-indigo-800"
+                                    >
+                                        See all
+                                    </Link>
+                                </div>
+
+                                {/* You can add recent chats here */}
+                                <div className="space-y-2">
+                                    <div className="text-center py-4">
+                                        <MessageCircle className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                        <p className="text-sm text-gray-500">No recent messages</p>
+                                        <button
+                                            onClick={() => navigate("/chats")}
+                                            className="text-xs text-indigo-600 hover:text-indigo-800 mt-2"
+                                        >
+                                            Start a conversation
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </aside>
 
                 </div>
             </div>
+
+            {/* UPDATED MobileBottomNav with Chat button */}
             <MobileBottomNav
                 user={user}
                 onCreate={() => setShowComposer(true)}
+                onChat={() => navigate("/chats")}
             />
         </>
     );

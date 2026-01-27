@@ -1,5 +1,6 @@
 // controller/chatController.js - COMPLETE FIXED VERSION
-const { Chat, Message, User, sequelize } = require("../model");
+// const { Chat, Message, User, sequelize, } = require("../model");
+const { Chat, Message, User, sequelize, DeletedMessage, DeletedChat } = require("../model");
 const { Op } = require("sequelize");
 
 // Create or get one-to-one chat
@@ -74,31 +75,76 @@ exports.getOrCreateChat = async (req, res) => {
 };
 
 // Get all chats for a user
+// exports.getChats = async (req, res) => {
+//     try {
+//         const userId = req.user.user_id;
+
+//         const chats = await Chat.findAll({
+//             include: [
+//                 {
+//                     model: User,
+//                     as: "Participants",
+//                     attributes: ["user_id", "name", "profilePic"],
+//                     where: { user_id: userId },
+//                 },
+//                 {
+//                     model: Message,
+//                     include: [{ model: User, attributes: ["user_id", "name", "profilePic"] }],
+//                 },
+//             ],
+//         });
+
+//         res.json(chats);
+//     } catch (err) {
+//         console.error("❌ Get Chats error:", err);
+//         res.status(500).json({ message: "Failed to fetch chats" });
+//     }
+// };
+
 exports.getChats = async (req, res) => {
     try {
         const userId = req.user.user_id;
 
         const chats = await Chat.findAll({
+            where: {
+                chat_id: {
+                    [Op.notIn]: sequelize.literal(`(
+                        SELECT chat_id FROM deleted_chats 
+                        WHERE user_id = ${userId}
+                    )`)
+                }
+            },
             include: [
                 {
                     model: User,
                     as: "Participants",
                     attributes: ["user_id", "name", "profilePic"],
-                    where: { user_id: userId },
+                    through: { attributes: [] },
                 },
                 {
                     model: Message,
-                    include: [{ model: User, attributes: ["user_id", "name", "profilePic"] }],
+                    as: "Messages",
+                    limit: 1,
+                    order: [["createdAt", "DESC"]],
                 },
             ],
+            order: [["updatedAt", "DESC"]],
         });
 
-        res.json(chats);
+
+        // Only return chats where current user is a participant
+        const userChats = chats.filter(chat =>
+            chat.Participants.some(p => p.user_id === userId)
+        );
+
+        res.json(userChats);
+
     } catch (err) {
         console.error("❌ Get Chats error:", err);
         res.status(500).json({ message: "Failed to fetch chats" });
     }
 };
+
 
 // Get messages for a chat - FIXED
 exports.getMessages = async (req, res) => {
@@ -139,7 +185,14 @@ exports.getMessages = async (req, res) => {
         // Fetch messages - FIXED QUERY
         const messages = await Message.findAll({
             where: {
-                chat_id: chat_id
+                chat_id: chat_id,
+                message_id: {
+                    [Op.notIn]: sequelize.literal(`(
+                        SELECT message_id FROM deleted_messages 
+                        WHERE user_id = ${userId}
+                    )`)
+                }
+
             },
             include: [{
                 model: User,
@@ -214,6 +267,8 @@ exports.sendMessage = async (req, res) => {
         }
 
         // Create message
+
+        const { temp_id } = req.body;
         const message = await Message.create({
             chat_id,
             content: content.trim(),
@@ -240,7 +295,10 @@ exports.sendMessage = async (req, res) => {
         // Broadcast via Socket.IO
         const io = req.app.get("io");
         if (io) {
-            const messageData = fullMessage.toJSON();
+            const messageData = {
+                ...fullMessage.toJSON(),
+                temp_id
+            };
             console.log(`📡 Broadcasting to room ${chat_id}`);
             io.to(chat_id.toString()).emit("receiveMessage", messageData);
         }
@@ -258,5 +316,293 @@ exports.sendMessage = async (req, res) => {
             message: "Failed to send message",
             error: err.message
         });
+    }
+};
+
+// Get chat info (participants)
+exports.getChatInfo = async (req, res) => {
+    try {
+        const { chat_id } = req.params;
+        const userId = req.user.user_id;
+
+        const chat = await Chat.findByPk(chat_id, {
+            include: [
+                {
+                    model: User,
+                    as: "Participants",
+                    attributes: ["user_id", "name", "profilePic"]
+                }
+            ]
+        });
+
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+
+        const otherUser = chat.Participants.find(p => p.user_id !== userId);
+
+        res.json({ otherUser });
+
+    } catch (err) {
+        console.error("❌ Get Chat Info error:", err);
+        res.status(500).json({ message: "Failed to fetch chat info" });
+    }
+};
+
+
+
+
+
+
+
+
+//// Delete functionalty 
+
+// Delete message for me only
+// exports.deleteMessageForMe = async (req, res) => {
+//     try {
+//         const { message_id } = req.params;
+//         const userId = req.user.user_id;
+
+//         console.log(`🗑️ Deleting message ${message_id} for user ${userId}`);
+
+//         // Check if message exists
+//         const message = await Message.findByPk(message_id);
+//         if (!message) {
+//             return res.status(404).json({ message: "Message not found" });
+//         }
+
+//         // Check if user is in the chat
+//         const chat = await Chat.findByPk(message.chat_id, {
+//             include: [{
+//                 model: User,
+//                 as: "Participants",
+//                 attributes: ["user_id"]
+//             }],
+//         });
+
+//         if (!chat) {
+//             return res.status(404).json({ message: "Chat not found" });
+//         }
+
+//         const isParticipant = chat.Participants.some(u => u.user_id === userId);
+//         if (!isParticipant) {
+//             return res.status(403).json({ message: "Not authorized" });
+//         }
+
+//         // Create deletion record (soft delete for this user)
+//         await DeletedMessage.create({
+//             message_id,
+//             user_id: userId
+//         });
+
+//         // Emit socket event
+//         const io = req.app.get("io");
+//         if (io) {
+//             io.to(message.chat_id.toString()).emit("messageDeleted", {
+//                 messageId: message_id,
+//                 userId: userId,
+//                 deleteForEveryone: false
+//             });
+//         }
+
+//         res.json({
+//             success: true,
+//             message: "Message deleted for you"
+//         });
+
+//     } catch (err) {
+//         console.error("❌ Delete message error:", err);
+//         res.status(500).json({ message: "Failed to delete message", error: err.message });
+//     }
+// };
+exports.deleteMessageForMe = async (req, res) => {
+    try {
+        const { message_id } = req.params;
+        const userId = req.user.user_id;
+
+        console.log(`🗑️ Deleting message ${message_id} for user ${userId}`);
+
+        const message = await Message.findByPk(message_id);
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" });
+        }
+
+        const chat = await Chat.findByPk(message.chat_id, {
+            include: [{ model: User, as: "Participants", attributes: ["user_id"] }]
+        });
+
+        if (!chat) return res.status(404).json({ message: "Chat not found" });
+
+        const isParticipant = chat.Participants.some(u => u.user_id === userId);
+        if (!isParticipant) return res.status(403).json({ message: "Not authorized" });
+
+        // prevent duplicate delete
+        const alreadyDeleted = await DeletedMessage.findOne({
+            where: { message_id, user_id: userId }
+        });
+
+        if (alreadyDeleted) {
+            return res.json({ success: true, message: "Already deleted for you" });
+        }
+
+        await DeletedMessage.create({
+            message_id,
+            user_id: userId
+        });
+
+        const io = req.app.get("io");
+        if (io) {
+            io.to(message.chat_id.toString()).emit("messageDeleted", {
+                messageId: message_id,
+                userId,
+                deleteForEveryone: false
+            });
+        }
+
+        res.json({ success: true, message: "Message deleted for you" });
+
+    } catch (err) {
+        console.error("❌ Delete message error:", err);
+        res.status(500).json({ message: "Failed to delete message", error: err.message });
+    }
+};
+
+// Delete message for everyone
+exports.deleteMessageForEveryone = async (req, res) => {
+    try {
+        const { message_id } = req.params;
+        const userId = req.user.user_id;
+
+        console.log(`🗑️ Deleting message ${message_id} for everyone by user ${userId}`);
+
+        // Check if message exists
+        const message = await Message.findByPk(message_id);
+        if (!message) {
+            return res.status(404).json({ message: "Message not found" });
+        }
+
+        // Check if user is the sender
+        if (message.sender_id !== userId) {
+            return res.status(403).json({
+                message: "Only the sender can delete messages for everyone"
+            });
+        }
+
+        // Check if message is too old (optional - Telegram allows 48 hours)
+        const messageAge = Date.now() - new Date(message.createdAt).getTime();
+        const hoursOld = messageAge / (1000 * 60 * 60);
+
+        if (hoursOld > 48) {
+            return res.status(400).json({
+                message: "Messages older than 48 hours cannot be deleted for everyone"
+            });
+        }
+
+        // Delete the message permanently
+        await message.destroy();
+
+        // Emit socket event
+        const io = req.app.get("io");
+        if (io) {
+            io.to(message.chat_id.toString()).emit("messageDeleted", {
+                messageId: message_id,
+                userId: userId,
+                deleteForEveryone: true
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Message deleted for everyone"
+        });
+
+    } catch (err) {
+        console.error("❌ Delete message for everyone error:", err);
+        res.status(500).json({ message: "Failed to delete message", error: err.message });
+    }
+};
+
+// Delete chat for me only
+exports.deleteChatForMe = async (req, res) => {
+    try {
+        const { chat_id } = req.params;
+        const userId = req.user.user_id;
+
+        console.log(`🗑️ Deleting chat ${chat_id} for user ${userId}`);
+
+        // Check if chat exists
+        const chat = await Chat.findByPk(chat_id);
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+
+        // Create deletion record
+        await DeletedChat.create({
+            chat_id,
+            user_id: userId
+        });
+
+        // Emit socket event
+        const io = req.app.get("io");
+        if (io) {
+            io.to(chat_id.toString()).emit("chatDeleted", {
+                chatId: chat_id,
+                userId: userId,
+                deleteForEveryone: false
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Chat deleted for you"
+        });
+
+    } catch (err) {
+        console.error("❌ Delete chat error:", err);
+        res.status(500).json({ message: "Failed to delete chat", error: err.message });
+    }
+};
+
+// Delete chat for everyone
+exports.deleteChatForEveryone = async (req, res) => {
+    try {
+        const { chat_id } = req.params;
+        const userId = req.user.user_id;
+
+        console.log(`🗑️ Deleting chat ${chat_id} for everyone by user ${userId}`);
+
+        // Check if chat exists
+        const chat = await Chat.findByPk(chat_id);
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+
+        // Delete all messages in chat
+        await Message.destroy({
+            where: { chat_id }
+        });
+
+        // Delete the chat
+        await chat.destroy();
+
+        // Emit socket event
+        const io = req.app.get("io");
+        if (io) {
+            io.to(chat_id.toString()).emit("chatDeleted", {
+                chatId: chat_id,
+                userId: userId,
+                deleteForEveryone: true
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Chat deleted for everyone"
+        });
+
+    } catch (err) {
+        console.error("❌ Delete chat for everyone error:", err);
+        res.status(500).json({ message: "Failed to delete chat", error: err.message });
     }
 };

@@ -599,6 +599,8 @@ const PostCard = ({ post, currentUser, onPostUpdated, onPostDeleted }) => {
                                     </div>
                                 )}
                                 <div className="flex gap-3">
+
+                                    {/* comment profile  */}
                                     <div className="flex-shrink-0">
                                         {currentUser.profilePic ? (
                                             <img
@@ -614,6 +616,10 @@ const PostCard = ({ post, currentUser, onPostUpdated, onPostDeleted }) => {
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* prifile  */}
+
+
                                     <div className="flex-1">
                                         <textarea
                                             value={commentText}
